@@ -1,0 +1,103 @@
+#include <stdio.h>
+
+#define MAX 10
+
+void round_robin(int processes[], int n, int arrival[], int burst[], int quantum) {
+    int remaining[MAX], wait[MAX] = {0}, turnaround[MAX];
+    int time = 0, completed = 0;
+
+    for (int i = 0; i < n; i++) {
+        remaining[i] = burst[i];
+    }
+
+    while (completed < n) {
+        int executed = 0;
+        for (int i = 0; i < n; i++) {
+            if (remaining[i] > 0 && arrival[i] <= time) {
+                if (remaining[i] > quantum) {
+                    time += quantum;
+                    remaining[i] -= quantum;
+                } else {
+                    time += remaining[i];
+                    wait[i] = time - arrival[i] - burst[i];
+                    remaining[i] = 0;
+                    completed++;
+                }
+                executed = 1;
+            }
+        }
+        if (!executed) {
+            time++;
+        }
+    }
+
+    for (int i = 0; i < n; i++) {
+        turnaround[i] = burst[i] + wait[i];
+    }
+
+    printf("Process  Arrival  Burst  Waiting  Turnaround\n");
+    for (int i = 0; i < n; i++) {
+        printf("%4d %8d %6d %8d %10d\n", processes[i], arrival[i], burst[i], wait[i], turnaround[i]);
+    }
+}
+
+void fcfs(int processes[], int n, int arrival[], int burst[]) {
+    int wait[MAX], turnaround[MAX], completion[MAX];
+    int total_wait = 0, total_turnaround = 0;
+
+    completion[0] = arrival[0] + burst[0];
+    wait[0] = 0;
+    turnaround[0] = burst[0];
+
+    for (int i = 1; i < n; i++) {
+        if (completion[i - 1] < arrival[i]) {
+            completion[i] = arrival[i] + burst[i];
+        } else {
+            completion[i] = completion[i - 1] + burst[i];
+        }
+        wait[i] = completion[i] - arrival[i] - burst[i];
+        turnaround[i] = completion[i] - arrival[i];
+    }
+
+    printf("Process  Arrival  Burst  Waiting  Turnaround\n");
+    for (int i = 0; i < n; i++) {
+        printf("%4d %8d %6d %8d %10d\n", processes[i], arrival[i], burst[i], wait[i], turnaround[i]);
+        total_wait += wait[i];
+        total_turnaround += turnaround[i];
+    }
+    printf("Average Waiting Time: %.2f\n", (float)total_wait / n);
+    printf("Average Turnaround Time: %.2f\n", (float)total_turnaround / n);
+}
+
+int main() {
+    int sys_processes[MAX], user_processes[MAX];
+    int sys_arrival[MAX], sys_burst[MAX], user_arrival[MAX], user_burst[MAX];
+    int sys_count, user_count, quantum;
+    
+    printf("Enter number of system processes: ");
+    scanf("%d", &sys_count);
+    for (int i = 0; i < sys_count; i++) {
+        printf("Enter arrival time and burst time for system process %d: ", i + 1);
+        sys_processes[i] = i + 1;
+        scanf("%d %d", &sys_arrival[i], &sys_burst[i]);
+    }
+    
+    printf("Enter number of user processes: ");
+    scanf("%d", &user_count);
+    for (int i = 0; i < user_count; i++) {
+        printf("Enter arrival time and burst time for user process %d: ", i + 1);
+        user_processes[i] = i + 1;
+        scanf("%d %d", &user_arrival[i], &user_burst[i]);
+    }
+    
+    printf("Enter time quantum for Round Robin: ");
+    scanf("%d", &quantum);
+    
+    printf("\nExecuting User Processes (Higher Priority) using Round Robin\n");
+    round_robin(user_processes, user_count, user_arrival, user_burst, quantum);
+    
+    printf("\nExecuting System Processes (Lower Priority) using FCFS\n");
+    fcfs(sys_processes, sys_count, sys_arrival, sys_burst);
+    
+    return 0;
+}
